@@ -1,23 +1,22 @@
 //
 //  BSMozaikLayout.h
-//  customLayout
 //
-//  Created by Bohdan Savych on 7/18/16.
+//  Created by Bohdan Savych on 7/19/16.
 //  Copyright © 2016 BBB. All rights reserved.
 //
-
 #import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
 
-@protocol BSMozaikLayoutDelegate <NSObject>
+@protocol BSMozaikDelegate <NSObject>
 
-- (CGSize)blockSizeForItemAtIndexPath:(NSIndexPath *)indexPath;
+- (CGSize)blockPrimitiveSizeForItemAtIndexPath:(NSIndexPath *)indexPath;
+- (NSInteger)countOfColumnInMozaik;
 
 @end
 
 @interface BSMozaikLayout : UICollectionViewLayout
 
-@property (nonatomic, assign) CGSize block;
-@property (nonatomic, weak) id<BSMozaikLayoutDelegate> delegate;
-@property (nonatomic, assign) CGFloat distanceBetweenCells;
+@property (nonatomic, weak) id<BSMozaikDelegate> delegate;
+@property (nonatomic, assign) CGFloat innerCellInset;//space between cells
 
 @end

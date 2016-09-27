@@ -1,8 +1,7 @@
 //
 //  BSMozaikLayout.m
-//  customLayout
 //
-//  Created by Bohdan Savych on 7/18/16.
+//  Created by Bohdan Savych on 7/19/16.
 //  Copyright © 2016 BBB. All rights reserved.
 //
 
@@ -10,172 +9,232 @@
 
 @interface BSMozaikLayout ()
 
+@property (nonatomic, strong) NSMutableArray<NSValue *> *sizesArray;
+@property (nonatomic, strong) NSMutableArray<NSMutableArray *> *layoutMatrix;
+@property (nonatomic, strong) NSMutableArray<NSValue *> *rectArray;
 @property (nonatomic, assign) CGFloat contentHeight;
-@property (nonatomic, assign) CGFloat contentWidth;
-@property (nonatomic, strong) NSMutableArray<UICollectionViewLayoutAttributes *> *cache;
-@property (nonatomic, strong) NSMutableArray<NSNumber *> *xOffsets;
-@property (nonatomic, strong) NSMutableArray<NSNumber *> *yOffsets;
-@property (nonatomic, strong) NSMutableArray<NSValue *> *sizes;
-@property (nonatomic, strong) NSMutableArray<NSValue *> *cellRects;
-@property (nonatomic, strong) NSMutableDictionary *sectionDicionary;
-
+@property (nonatomic, assign) CGFloat blockSide;
 @end
 
 @implementation BSMozaikLayout
 
-- (void)prepareLayout {
+- (void)prepareLayout
+{
     [super prepareLayout];
     
-    _contentWidth = CGRectGetWidth(self.collectionView.bounds);
+    [self resetLayout];
+    
+    
+    NSInteger columnCount = NSNotFound;
+    
+    if ([self.delegate respondsToSelector:@selector(countOfColumnInMozaik)])
+        columnCount = [self.delegate countOfColumnInMozaik];
+    
+    if (columnCount <= 0 ||
+        ![self.delegate respondsToSelector:@selector(blockPrimitiveSizeForItemAtIndexPath:)] ||
+        columnCount == NSNotFound)
+        return;
+    
+    NSInteger allItemsCount = 0;
     
     for (int i = 0; i < self.collectionView.numberOfSections; i++)
     {
-        for (int j = 0; j < [self.collectionView numberOfItemsInSection:i]; j++)
-        {
-            NSIndexPath *indexPath = [NSIndexPath indexPathForItem:j inSection:i];
-            CGSize cellSize = [self.delegate blockSizeForItemAtIndexPath:indexPath];
-            CGSize actualSize = CGSizeMake(cellSize.width * self.block.width, cellSize.height * self.block.height);
-            [self.sizes addObject:[NSValue valueWithCGSize:actualSize]];
+        for (int j = 0; j < [self.collectionView numberOfItemsInSection:i]; j++) {
+            allItemsCount++;
+            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:j inSection:i];
+            CGSize size = [self.delegate blockPrimitiveSizeForItemAtIndexPath:indexPath];
+            size = CGSizeMake(MIN(size.width, columnCount), size.height);
+            NSValue *sizeValue = [NSValue valueWithCGSize:size];
+            [self.sizesArray addObject:sizeValue];
         }
-        
-        [self.sectionDicionary setObject:@([self.collectionView numberOfItemsInSection:i]) forKey:@(i)];//key-section object - items in section
     }
     
-    //first cell always will be on this position so set it before loop
-    [self.xOffsets addObject:@(0)];
-    [self.yOffsets addObject:@(0)];
-    [self.cellRects addObject:[NSValue valueWithCGRect:CGRectMake(0, 0, self.sizes[0].CGSizeValue.width, self.sizes[0].CGSizeValue.height)]];
+    self.blockSide = CGRectGetWidth(self.collectionView.bounds) / columnCount;
     
-    for (int z = 1; z < self.sizes.count; z++)
+    NSInteger rowsCount = 0;
+    CGFloat previousValue = 0.f;
+    CGFloat maxHeightInRows = 0;
+    
+    for (NSValue *sizeValue in self.sizesArray)
     {
-        for (int i = 0; i < self.cellRects.count; i++)
+        CGSize size = [sizeValue CGSizeValue];
+        
+        if (size.width == columnCount)
         {
-            CGFloat currentRightBoundForCell = self.xOffsets[i].floatValue + self.sizes[i].CGSizeValue.width;
-            CGFloat currentBottomBoundForCell = self.contentHeight = self.yOffsets[i].floatValue + self.sizes[i].CGSizeValue.height;
-            CGFloat xOffsetForNewCell = 0;
-            CGFloat yOffsetForNewCell = 0;
-            CGRect currentRectForCell = CGRectZero;
+            rowsCount += size.height;
+            previousValue = 0;
+            maxHeightInRows = 0;
+        }
+        else
+        {
             
-            if ((currentRightBoundForCell + self.sizes[z].CGSizeValue.width) <= self.contentWidth)
+            previousValue += size.width;
+            
+            if (previousValue > columnCount)
             {
-                xOffsetForNewCell = currentRightBoundForCell;//x after previous cell
-                yOffsetForNewCell = self.yOffsets[i].floatValue;//on the same row
-                currentRectForCell = CGRectMake(xOffsetForNewCell, yOffsetForNewCell, self.sizes[z].CGSizeValue.width , self.sizes[z].CGSizeValue.height);
+                rowsCount += maxHeightInRows;
+                maxHeightInRows = size.height;
+                previousValue = size.width;
+                
+                continue;
             }
-            else
+            
+            maxHeightInRows = MAX(maxHeightInRows, size.height);
+            
+            if (previousValue == columnCount)
             {
-                xOffsetForNewCell = 0;//on the first col
-                yOffsetForNewCell = currentBottomBoundForCell;//y after previous cell
-                currentRectForCell = CGRectMake(xOffsetForNewCell, yOffsetForNewCell, self.sizes[z].CGSizeValue.width , self.sizes[z].CGSizeValue.height);
+                rowsCount += maxHeightInRows;
+                maxHeightInRows = 0;
+                previousValue = 0;
             }
-            
-            BOOL shouldAdd = YES;
-            
-            for (int j = 0; j < self.cellRects.count; j++)
+        }
+    }
+    
+    if (previousValue > 0)
+        rowsCount += maxHeightInRows;
+    
+    for (int i = 0; i < columnCount; i++)
+    {
+        self.layoutMatrix[i] = [NSMutableArray new];
+        
+        for (int j = 0 ; j < rowsCount; j++)
+        {
+            [self.layoutMatrix[i] addObject:@(0)];
+        }
+    }
+    
+    for (NSValue *sizeValue in self.sizesArray)
+    {
+        CGSize blockSize = [sizeValue CGSizeValue];
+        int j = 0, i = 0;
+        BOOL shouldAdd = NO;
+        
+        for (j = 0; j < rowsCount; j++)
+        {
+            for (i = 0; i < columnCount; i++)
             {
-                if (CGRectIntersectsRect (self.cellRects[j].CGRectValue,currentRectForCell))
+                
+                if ([self.layoutMatrix[i][j] isEqual:@(0)])
                 {
-                    shouldAdd = NO;
-                    break;
+                    if (i + (int)blockSize.width > columnCount)
+                        continue;
+                    
+                    shouldAdd = YES;
+                    
+                    for (int i1 = i; i1 < i + (int)blockSize.width && shouldAdd; i1++)
+                    {
+                        for (int j1 = j; j1 < j + (int)blockSize.height; j1++)
+                        {
+                            if (![self.layoutMatrix[i1][j1] isEqual:@(0)])
+                                shouldAdd = NO;
+                        }
+                    }
+                    
+                    if (shouldAdd)
+                    {
+                        for (int i1 = i; i1 < i+ (int)blockSize.width; i1++)
+                        {
+                            for (int j1 = j; j1 < j + (int)blockSize.height; j1++)
+                            {
+                                self.layoutMatrix[i1][j1] = @1;
+                            }
+                        }
+                        
+                        break;
+                    }
                 }
             }
             
             if (shouldAdd)
-            {
-                [self.xOffsets addObject:@(xOffsetForNewCell)];
-                [self.yOffsets addObject:@(yOffsetForNewCell)];
-                [self.cellRects addObject:[NSValue valueWithCGRect:currentRectForCell]];
-                self.contentHeight = currentBottomBoundForCell + currentRectForCell.size.height;
-                
-                break;//go to another cell rect
-            }
+                break;
         }
+        
+        CGRect rectForItem = CGRectMake(i * self.blockSide, j * self.blockSide, self.blockSide * blockSize.width, self.blockSide * blockSize.height);
+        [self.rectArray addObject:[NSValue valueWithCGRect:rectForItem]];
+        self.contentHeight = MAX(self.contentHeight, CGRectGetMaxY(rectForItem));
     }
-    
 }
 
 - (CGSize)collectionViewContentSize
 {
-    return CGSizeMake(self.contentWidth, self.contentHeight);
+    return CGSizeMake(CGRectGetWidth(self.collectionView.bounds), self.contentHeight);
 }
 
 - (NSArray *)layoutAttributesForElementsInRect:(CGRect)rect
 {
     NSMutableArray *attributesInRect = [NSMutableArray new];
     
-    for (NSValue *cellRect in self.cellRects)
+    for (NSValue *cellRect in self.rectArray)
     {
-
-        NSIndexPath *indexPath = [self getIndexPathForRectAtIndex:[self.cellRects indexOfObject:cellRect]];
-        UICollectionViewLayoutAttributes *attribute = [UICollectionViewLayoutAttributes layoutAttributesForCellWithIndexPath:indexPath];
-        attribute.frame = CGRectInset(cellRect.CGRectValue, self.distanceBetweenCells, self.distanceBetweenCells);
+        UICollectionViewLayoutAttributes *attribute = [UICollectionViewLayoutAttributes layoutAttributesForCellWithIndexPath:[self indexPathAcccordingToPositionInArray:[self.rectArray indexOfObject:cellRect]]];
+        attribute.frame = CGRectInset(cellRect.CGRectValue, self.innerCellInset, self.innerCellInset);
         [attributesInRect addObject:attribute];
     }
     
     return attributesInRect;
 }
 
-#pragma mark - helpers
+#pragma mark - private methods
 
-- (NSIndexPath *)getIndexPathForRectAtIndex:(NSInteger)index
+- (NSIndexPath *)indexPathAcccordingToPositionInArray:(NSUInteger)index
 {
-    NSInteger absoluteValue = 0;
+    NSUInteger absoluteValue = 0;
     
     for (int i = 0; i < self.collectionView.numberOfSections; i++)
     {
-        absoluteValue += [self.sectionDicionary[@(i)] integerValue];
+        NSUInteger currentCountOfRowInSection = [self.collectionView numberOfItemsInSection:i];
+        absoluteValue += currentCountOfRowInSection;
         
-        if (absoluteValue > index)
+        if (absoluteValue < index)
+            continue;
+        else if (absoluteValue > index)
         {
-            NSInteger row = [self.sectionDicionary[@(i)] integerValue] - (absoluteValue - index);
+            NSUInteger row = currentCountOfRowInSection - (absoluteValue - index);
             
             return [NSIndexPath indexPathForRow:row inSection:i];
         }
+        else
+        {
+            return [NSIndexPath indexPathForRow:0 inSection:i + 1 < self.collectionView.numberOfSections ? i + 1 : i ];
+        }
     }
     
-    return 0;
+    return nil;
 }
 
-#pragma mark - getters
-
-- (NSMutableArray<NSValue *> *)sizes
+- (void)resetLayout
 {
-    if (!_sizes)
-        _sizes = [@[] mutableCopy];
+    self.rectArray = nil;
+    self.layoutMatrix = nil;
+    self.sizesArray = nil;
+    self.contentHeight = 0;
+    self.blockSide = 0;
+}
+
+#pragma mark - getters & setters
+
+- (NSMutableArray *)sizesArray
+{
+    if (!_sizesArray)
+        _sizesArray = [@[] mutableCopy];
     
-    return _sizes;
+    return _sizesArray;
 }
 
-- (NSMutableArray<NSValue *> *)cellRects
+- (NSMutableArray<NSMutableArray *> *)layoutMatrix
 {
-    if (!_cellRects)
-        _cellRects = [@[] mutableCopy];
+    if (!_layoutMatrix)
+        _layoutMatrix = [@[] mutableCopy];
     
-    return _cellRects;
+    return _layoutMatrix;
 }
 
-- (NSMutableArray<NSNumber *> *)yOffsets
+- (NSMutableArray *)rectArray
 {
-    if (!_yOffsets)
-        _yOffsets = [@[] mutableCopy];
+    if (!_rectArray)
+        _rectArray = [@[] mutableCopy];
     
-    return _yOffsets;
-}
-
-- (NSMutableArray<NSNumber *> *)xOffsets
-{
-    if (!_xOffsets)
-        _xOffsets = [@[] mutableCopy];
-    
-    return _xOffsets;
-}
-
-- (NSMutableDictionary *)sectionDicionary
-{
-    if (!_sectionDicionary)
-        _sectionDicionary = [NSMutableDictionary new];
-
-    return _sectionDicionary;
+    return _rectArray;
 }
 
 @end
