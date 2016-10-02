@@ -28,6 +28,24 @@ Implement UICollectionViewDelegate/DataSource and BSMozaikDelegate.
     {
       return 5;
     }
+    
+    - (CGSize)getSizeForItemAtIndexPathFourthVariant:(NSUInteger)index
+    {
+        index %= 5;
+    
+        if (!index)
+            return CGSizeMake(1, 1);
+        else if (index == 1)
+            return CGSizeMake(1, 2);
+        else if (index == 2)
+            return CGSizeMake(1, 1);
+        else if(index == 3)
+            return CGSizeMake(2, 1);
+        else if (index == 4)
+            return CGSizeMake(1, 1); 
+    
+        return CGSizeZero;
+    }
 
 ## Installation
 1) Import file 
