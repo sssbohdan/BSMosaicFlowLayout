@@ -14,6 +14,7 @@
 @property (nonatomic, strong) NSMutableArray<NSValue *> *rectArray;
 @property (nonatomic, assign) CGFloat contentHeight;
 @property (nonatomic, assign) CGFloat blockSide;
+
 @end
 
 @implementation BSMozaikLayout
@@ -23,7 +24,6 @@
     [super prepareLayout];
     
     [self resetLayout];
-    
     
     NSInteger columnCount = NSNotFound;
     
@@ -52,7 +52,7 @@
     self.blockSide = CGRectGetWidth(self.collectionView.bounds) / columnCount;
     
     NSInteger rowsCount = 0;
-    CGFloat previousValue = 0.f;
+    CGFloat previousValue = 0;
     CGFloat maxHeightInRows = 0;
     
     for (NSValue *sizeValue in self.sizesArray)
@@ -67,7 +67,6 @@
         }
         else
         {
-            
             previousValue += size.width;
             
             if (previousValue > columnCount)
@@ -112,8 +111,7 @@
         for (j = 0; j < rowsCount; j++)
         {
             for (i = 0; i < columnCount; i++)
-            {
-                
+            {   
                 if ([self.layoutMatrix[i][j] isEqual:@(0)])
                 {
                     if (i + (int)blockSize.width > columnCount)
@@ -125,7 +123,7 @@
                     {
                         for (int j1 = j; j1 < j + (int)blockSize.height; j1++)
                         {
-                            if (![self.layoutMatrix[i1][j1] isEqual:@(0)])
+                            if (![self.layoutMatrix[i1][j1] isEqual: @(0)])
                                 shouldAdd = NO;
                         }
                     }
@@ -150,7 +148,7 @@
         }
         
         CGRect rectForItem = CGRectMake(i * self.blockSide, j * self.blockSide, self.blockSide * blockSize.width, self.blockSide * blockSize.height);
-        [self.rectArray addObject:[NSValue valueWithCGRect:rectForItem]];
+        [self.rectArray addObject: [NSValue valueWithCGRect:rectForItem]];
         self.contentHeight = MAX(self.contentHeight, CGRectGetMaxY(rectForItem));
     }
 }
@@ -187,6 +185,7 @@
         
         if (absoluteValue < index)
             continue;
+        
         else if (absoluteValue > index)
         {
             NSUInteger row = currentCountOfRowInSection - (absoluteValue - index);
