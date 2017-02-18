@@ -1,13 +1,13 @@
 //
-//  BSMozaikLayout.m
+//  BSMozaicLayout.m
 //
 //  Created by Bohdan Savych on 7/19/16.
 //  Copyright © 2016 BBB. All rights reserved.
 //
 
-#import "BSMozaikLayout.h"
+#import "BSMozaicLayout.h"
 
-@interface BSMozaikLayout ()
+@interface BSMozaicLayout ()
 
 @property (nonatomic, strong) NSMutableArray<NSValue *> *sizesArray;
 @property (nonatomic, strong) NSMutableArray<NSMutableArray *> *layoutMatrix;
@@ -17,7 +17,7 @@
 
 @end
 
-@implementation BSMozaikLayout
+@implementation BSMozaicLayout
 
 - (void)prepareLayout
 {
@@ -27,8 +27,8 @@
     
     NSInteger columnCount = NSNotFound;
     
-    if ([self.delegate respondsToSelector:@selector(countOfColumnInMozaik)])
-        columnCount = [self.delegate countOfColumnInMozaik];
+    if ([self.delegate respondsToSelector:@selector(countOfColumnInMozaic)])
+        columnCount = [self.delegate countOfColumnInMozaic];
     
     if (columnCount <= 0 ||
         ![self.delegate respondsToSelector:@selector(blockPrimitiveSizeForItemAtIndexPath:)] ||
