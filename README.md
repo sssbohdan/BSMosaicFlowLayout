@@ -1,38 +1,38 @@
-# BSMozaikFlowLayout
+# BSMozaicFlowLayout
 
-Subclass of UICollectionViewLayout which allow you to create nice Mozaik Layout.
+Subclass of UICollectionViewLayout which allow you to create nice Mozaic Layout.
 
-![BSMozaikDemp](http://i.imgur.com/VLZ4lW8.png)
-![BSMozaikDemo2](http://i.imgur.com/d3dnOzX.png)
+![BSMozaicDemo](http://i.imgur.com/xr4pjFY.png)
+![BSMozaicDemo2](http://i.imgur.com/w2XJpAK.png)
 
 
 
 ## Usage
 Set FlowLayoutDelegate
 
-    BSMozaikLayout *bsMozaikLayout = (BSMozaikLayout *)self.collectionView.collectionViewLayout;
-    bsMozaikLayout.delegate = self;
-    bsMozaikLayout.innerCellInset = 3.f;
+    BSMozaicLayout *bsMozaicLayout = (BSMozaicLayout *)self.collectionView.collectionViewLayout;
+    bsMozaicLayout.delegate = self;
+    bsMozaicLayout.innerCellInset = 3.f;
 
 
-Implement UICollectionViewDelegate/DataSource and BSMozaikDelegate.
+Implement UICollectionViewDelegate/DataSource and BSMozaicDelegate.
 
     - (CGSize)blockPrimitiveSizeForItemAtIndexPath:(NSIndexPath *)indexPath
     {
-      CGSize blockSize = [self getSizeForItemAtIndexPathFourthVariant:indexPath.row];
-    
-      return blockSize;
+        CGSize blockSize = [self getSizeForItemAtIndex:indexPath.row];
+
+        return blockSize;
     }
-    
-    - (NSInteger)countOfColumnInMozaik
+
+    - (NSInteger)countOfColumnInMozaic
     {
-      return 5;
+        return 5;
     }
-    
-    - (CGSize)getSizeForItemAtIndexPathFourthVariant:(NSUInteger)index
+
+    - (CGSize)getSizeForItemAtIndex:(NSUInteger)index
     {
         index %= 5;
-    
+
         if (!index)
             return CGSizeMake(1, 1);
         else if (index == 1)
@@ -42,18 +42,18 @@ Implement UICollectionViewDelegate/DataSource and BSMozaikDelegate.
         else if(index == 3)
             return CGSizeMake(2, 1);
         else if (index == 4)
-            return CGSizeMake(1, 1); 
-    
+            return CGSizeMake(1, 1);
+
         return CGSizeZero;
     }
 
 ## Installation
 1) Import file 
       
-      #import "BSMozaikLayout.h"
+      #import "BSMozaicLayout.h"
 
 2) Add the layout as the subclass of your UICollectionViewLayout.
-![howto](http://i.imgur.com/STcVs8u.png)
+![howto](http://i.imgur.com/6jEb3fP.png)
 
 ## Author
 Problems ? Suggestions? Send to me! bbbsavych@gmail.com
